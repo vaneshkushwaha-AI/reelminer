@@ -4,7 +4,7 @@
 
 // ─── CONFIG ──────────────────────────────────────────────────
 const CFG = {
-  GEMINI_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+  GEMINI_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent',
   CORS_PROXIES: [
     url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     url => `https://corsproxy.io/?${encodeURIComponent(url)}`
