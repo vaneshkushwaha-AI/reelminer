@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReelMiner — AI-Powered Viral Reel Extractor</title>
+  <meta name="description" content="Extract the top 5 most viral reel moments from any YouTube video using AI. 100% free, no server needed.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛏️</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Background effects -->
+    <div class="bg-orb bg-orb--1"></div>
+    <div class="bg-orb bg-orb--2"></div>
+    <div class="bg-orb bg-orb--3"></div>
+
+    <!-- Toast Notifications -->
+    <div id="notifications" class="notifications"></div>
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header__logo">
+        <span class="header__icon">⛏️</span>
+        <span class="header__title">ReelMiner</span>
+        <span class="header__badge">FREE</span>
+      </div>
+      <div class="header__actions">
+        <button id="history-btn" class="btn-icon" title="Analysis History">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+        </button>
+        <button id="settings-btn" class="btn-icon" title="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+      <div class="modal__backdrop"></div>
+      <div class="modal__content glass-card">
+        <div class="modal__header">
+          <h2>⚙️ Settings</h2>
+          <button class="modal__close" id="settings-close">&times;</button>
+        </div>
+        <div class="form-group">
+          <label for="api-key-input">Gemini API Key</label>
+          <div class="input-row">
+            <input type="password" id="api-key-input" placeholder="Paste your Gemini API key here">
+            <button id="toggle-key-vis" class="btn-icon btn-icon--sm" title="Show/Hide">👁️</button>
+          </div>
+          <p class="form-help">
+            Get a <strong>free</strong> API key → 
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>
+            (sign in with Google, click "Create API Key")
+          </p>
+        </div>
+        <div class="modal__footer">
+          <button id="save-settings" class="btn btn--primary">Save Key</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="modal">
+      <div class="modal__backdrop"></div>
+      <div class="modal__content glass-card">
+        <div class="modal__header">
+          <h2>📋 Analysis History</h2>
+          <button class="modal__close" id="history-close">&times;</button>
+        </div>
+        <div id="history-list" class="history-list">
+          <p class="text-muted">No analyses yet. Start by mining your first video!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- ===== API Key Banner ===== -->
+      <div id="api-banner" class="api-banner glass-card">
+        <div class="api-banner__icon">🔑</div>
+        <div class="api-banner__text">
+          <strong>One-time setup:</strong> Get a free Gemini API key to power the AI analysis.
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get Key →</a>
+        </div>
+        <button id="api-banner-btn" class="btn btn--primary btn--sm">Enter Key</button>
+      </div>
+
+      <!-- ===== Input Section ===== -->
+      <section id="section-input" class="section">
+        <div class="hero">
+          <h1 class="hero__title">
+            Extract <span class="text-gradient">Viral Reels</span> with AI
+          </h1>
+          <p class="hero__sub">Paste a YouTube video URL and let AI find the top 5 most share-worthy reel moments — scored by virality &amp; audience reach.</p>
+        </div>
+
+        <div class="input-card glass-card">
+          <!-- YouTube URL -->
+          <div class="form-group">
+            <label for="youtube-url">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+              YouTube Video URL
+            </label>
+            <input type="url" id="youtube-url" class="input" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ" autocomplete="off">
+          </div>
+
+          <!-- Video Preview -->
+          <div id="video-preview" class="video-preview hidden">
+            <img id="video-thumb" src="" alt="thumbnail">
+            <div class="video-preview__info">
+              <span id="video-title" class="video-preview__title"></span>
+            </div>
+          </div>
+
+          <!-- Channel Goal -->
+          <div class="form-group">
+            <label for="channel-goal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              Channel Goal / Niche
+            </label>
+            <input type="text" id="channel-goal" class="input" placeholder="e.g. Tech reviews for 18-35 year olds" autocomplete="off">
+          </div>
+
+          <!-- Durations -->
+          <div class="form-group">
+            <label>Preferred Reel Duration</label>
+            <div class="duration-chips">
+              <label class="chip chip--active"><input type="checkbox" name="dur" value="30" checked><span>⚡ 30 s</span></label>
+              <label class="chip chip--active"><input type="checkbox" name="dur" value="60" checked><span>🎬 60 s</span></label>
+              <label class="chip chip--active"><input type="checkbox" name="dur" value="90" checked><span>📽️ 90 s</span></label>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <button id="extract-btn" class="btn btn--primary btn--lg" disabled>
+            <span class="btn__icon">⛏️</span>
+            <span class="btn__text">Mine Viral Reels</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ===== Loading Section ===== -->
+      <section id="section-loading" class="section hidden">
+        <div class="loading-card glass-card">
+          <h2 class="loading-card__title">Mining in progress…</h2>
+          <div class="steps">
+            <div class="step" id="step-transcript">
+              <div class="step__dot"></div>
+              <div class="step__label">Extracting transcript &amp; timestamps</div>
+            </div>
+            <div class="step" id="step-analyze">
+              <div class="step__dot"></div>
+              <div class="step__label">AI scanning for viral moments</div>
+            </div>
+            <div class="step" id="step-render">
+              <div class="step__dot"></div>
+              <div class="step__label">Preparing your reel cards</div>
+            </div>
+          </div>
+          <div class="loading-animation">
+            <div class="pickaxe-bounce">⛏️</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Manual Transcript Section ===== -->
+      <section id="section-manual" class="section hidden">
+        <div class="glass-card manual-card">
+          <h2>📝 Paste Transcript Manually</h2>
+          <p class="text-muted">Auto-extraction didn't work for this video. No worries — you can paste the transcript yourself.</p>
+
+          <div class="instructions">
+            <h4>How to copy the transcript from YouTube:</h4>
+            <ol>
+              <li>Open the YouTube video in a new tab</li>
+              <li>Click the <strong>"…" (More)</strong> button below the video</li>
+              <li>Click <strong>"Show transcript"</strong></li>
+              <li>Select all the text (Ctrl+A) and copy (Ctrl+C)</li>
+              <li>Paste it in the box below</li>
+            </ol>
+          </div>
+
+          <textarea id="manual-transcript" class="textarea" rows="10" placeholder="0:00 Welcome everyone to today's video...&#10;0:05 Today we're going to talk about...&#10;..."></textarea>
+
+          <div class="manual-card__actions">
+            <button id="manual-back" class="btn btn--ghost">← Back</button>
+            <button id="manual-submit" class="btn btn--primary">Continue Analysis →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Results Section ===== -->
+      <section id="section-results" class="section hidden">
+        <div class="results-header">
+          <div>
+            <h2 class="results-header__title">🎬 Top 5 Viral Reel Opportunities</h2>
+            <p class="results-header__sub text-muted" id="results-meta"></p>
+          </div>
+          <div class="results-header__actions">
+            <button id="export-btn" class="btn btn--secondary">📄 Export</button>
+            <button id="new-btn" class="btn btn--primary">⛏️ New Analysis</button>
+          </div>
+        </div>
+
+        <div id="reels-container" class="reels-grid"></div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>ReelMiner · 100 % free · No server · Powered by <a href="https://ai.google.dev/" target="_blank" rel="noopener">Google Gemini</a></p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
