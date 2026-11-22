@@ -4,7 +4,13 @@
 
 // ─── CONFIG ──────────────────────────────────────────────────
 const CFG = {
-  GEMINI_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent',
+  GEMINI_BASE: 'https://generativelanguage.googleapis.com/v1beta/models',
+  MODELS: [
+    'gemini-3.8-flash',
+    'gemini-2.5-flash',
+    'gemini-1.5-flash',
+    'gemini-2.5-pro'
+  ],
   CORS_PROXIES: [
     url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     url => `https://corsproxy.io/?${encodeURIComponent(url)}`
@@ -239,29 +245,66 @@ async function callGemini(prompt) {
   const apiKey = localStorage.getItem(CFG.STORE.KEY);
   if (!apiKey) throw new Error('No API key set');
 
-  const res = await fetch(`${CFG.GEMINI_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 8192
-      }
-    })
-  });
+  let lastError = null;
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    if (res.status === 400 && err?.error?.message?.includes('API key')) throw new Error('Invalid Gemini API key. Check Settings.');
-    if (res.status === 429) throw new Error('Rate limit reached. Wait a minute and try again.');
-    throw new Error(err?.error?.message || `Gemini API error (${res.status})`);
+  for (const model of CFG.MODELS) {
+    try {
+      const url = `${CFG.GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 8192
+          }
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const errMsg = err?.error?.message || `Status ${res.status}`;
+
+        if (res.status === 400 && errMsg.includes('API key')) {
+          throw new Error('Invalid Gemini API key. Check Settings.');
+        }
+
+        // If high demand, rate limit, overloaded, or unavailable, try next fallback model
+        const lowerMsg = errMsg.toLowerCase();
+        if (
+          res.status === 503 ||
+          res.status === 429 ||
+          res.status === 404 ||
+          lowerMsg.includes('demand') ||
+          lowerMsg.includes('overloaded') ||
+          lowerMsg.includes('unavailable') ||
+          lowerMsg.includes('quota') ||
+          lowerMsg.includes('no longer available')
+        ) {
+          console.warn(`Model ${model} unavailable (${errMsg}). Trying fallback model...`);
+          lastError = new Error(errMsg);
+          continue;
+        }
+
+        throw new Error(errMsg);
+      }
+
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        console.warn(`Model ${model} returned empty response. Trying fallback model...`);
+        continue;
+      }
+      return text;
+    } catch (e) {
+      if (e.message.includes('Invalid Gemini API key')) throw e;
+      lastError = e;
+      console.warn(`Error with ${model}:`, e);
+    }
   }
 
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Empty response from Gemini');
-  return text;
+  throw lastError || new Error('All Gemini models are temporarily experiencing high demand. Please wait a minute and retry.');
 }
 
 function parseGeminiJSON(raw) {
